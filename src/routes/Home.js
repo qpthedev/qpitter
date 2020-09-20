@@ -1,32 +1,27 @@
+import Qweet from "components/Qweet";
 import { dbService } from "fbase";
 import React, { useEffect, useState } from "react";
 
-const Home = () => {
+const Home = ({ userObj }) => {
   const [qweet, setQweet] = useState("");
   const [qweets, setQweets] = useState([]);
-  const getQweets = async () => {
-    const dbQweets = await dbService
-      .collection("qweets")
-      .orderBy("createdAt", "asc")
-      .get();
-    dbQweets.forEach((document) => {
-      const qweetObject = {
-        ...document.data(),
-        id: document.id,
-      };
-      setQweets((prev) => [qweetObject, ...prev]);
-    });
-  };
 
   useEffect(() => {
-    getQweets();
+    dbService.collection("qweets").onSnapshot((snapshot) => {
+      const qweetArray = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setQweets(qweetArray);
+    });
   }, []);
 
   const onSubmit = async (event) => {
     event.preventDefault();
     await dbService.collection("qweets").add({
-      qweet,
+      text: qweet,
       createdAt: Date.now(),
+      creatorId: userObj.uid,
     });
     setQweet("");
   };
@@ -53,9 +48,11 @@ const Home = () => {
       </form>
       <div>
         {qweets.map((qweet) => (
-          <div key={qweet.id}>
-            <h4>{qweet.qweet}</h4>
-          </div>
+          <Qweet
+            key={qweet.id}
+            qweetObj={qweet}
+            isOwner={qweet.creatorId === userObj.uid}
+          />
         ))}
       </div>
     </div>
